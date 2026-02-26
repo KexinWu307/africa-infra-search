@@ -8,57 +8,57 @@ from datetime import datetime
 # ====================== 自定义配置（你需要改的部分）======================
 # 1. 关键词组A：非洲各国/机构（替换成你的完整列表）
 KEYWORDS_GROUP_A = [
-"非洲 Africa
-撒哈拉以南非洲 Sub-Saharan Africa
-北非 North Africa
-南非 Southern Africa
-西非 West Africa
-东非 East Africa
-南部非洲发展共同体 SADC
-西非国家经济共同体 ECOWAS
-非洲大陆自由贸易区 AfCFTA
-中亚 Central Asia
-埃及 Egypt
-利比亚 Libya
-毛里塔尼亚 Mauritania
-塞内加尔 Senegal
-科特迪瓦 Cote d‘Ivoire
-尼日利亚 Nigeria
-喀麦隆 Cameroon
-刚果民主共和国 DRC
-安哥拉 Angola
-肯尼亚 Kenya
-乌干达 Uganda
-哈萨克斯坦 Kazakhstan
-乌兹别克斯坦 Uzbekistan
-一带一路 Belt and Road
-中非合作论坛 FOCAC
-中国政府优惠贷款 Concessional Loan
-中国进出口银行 China Exim Bank
-国家国际发展合作署 CIDCA"
+"非洲 Africa",
+    "撒哈拉以南非洲 Sub-Saharan Africa",
+    "北非 North Africa",
+    "南非 Southern Africa",
+    "西非 West Africa",
+    "东非 East Africa",
+    "南部非洲发展共同体 SADC",
+    "西非国家经济共同体 ECOWAS",
+    "非洲大陆自由贸易区 AfCFTA",
+    "中亚 Central Asia",
+    "埃及 Egypt",
+    "利比亚 Libya",
+    "毛里塔尼亚 Mauritania",
+    "塞内加尔 Senegal",
+    "科特迪瓦 Cote d‘Ivoire",
+    "尼日利亚 Nigeria",
+    "喀麦隆 Cameroon",
+    "刚果民主共和国 DRC",
+    "安哥拉 Angola",
+    "肯尼亚 Kenya",
+    "乌干达 Uganda",
+    "哈萨克斯坦 Kazakhstan",
+    "乌兹别克斯坦 Uzbekistan",
+    "一带一路 Belt and Road",
+    "中非合作论坛 FOCAC",
+    "中国政府优惠贷款 Concessional Loan",
+    "中国进出口银行 China Exim Bank",
+    "国家国际发展合作署 CIDCA",
 ]
 
 # 2. 关键词组B：基础设施相关（替换成你的完整列表）
 KEYWORDS_GROUP_B = [
-    "智慧城市 Smart City
-数字政府 e-Government
-光纤骨干网 Fiber Backbone
-物联网 IoT
-光伏 Solar PV
-太阳能 Solar Power
-电站 Power Plant
-电网 Power Grid
-输变电 Transmission Line
-变电站 Substation
-矿业 Mining
-矿山供电 Mine Power Supply
-源网荷储 Source-Grid-Load-Storage
-铁路 Railway
-港口 Port
-公路 Highway
-机场 Airport
-基础设施 Infrastructure
-公共工程 Public Works"
+  "智慧城市 Smart City",
+    "数字政府 e-Government",
+    "光纤骨干网 Fiber Backbone",
+    "物联网 IoT",
+    "光伏 Solar PV",
+    "太阳能 Solar Power",
+    "电站 Power Plant",
+    "电网 Power Grid",
+    "输变电 Transmission Line",
+    "变电站 Substation",
+    "矿业 Mining",
+    "矿山供电 Mine Power Supply",
+    "源网荷储 Source-Grid-Load-Storage",
+    "铁路 Railway",
+    "港口 Port",
+    "公路 Highway",
+    "机场 Airport",
+    "基础设施 Infrastructure",
+    "公共工程 Public Works",
 ]
 
 # 3. 接收结果的邮箱
