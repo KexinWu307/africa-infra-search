@@ -4,11 +4,13 @@ from email.mime.text import MIMEText
 from email.header import Header
 import time
 from datetime import datetime
+from bs4 import BeautifulSoup
+import urllib.parse
 
 # ====================== 自定义配置（你需要改的部分）======================
-# 1. 关键词组A：非洲各国/机构（替换成你的完整列表）
+# 1. 关键词组A：非洲各国/机构
 KEYWORDS_GROUP_A = [
-"非洲 Africa",
+    "非洲 Africa",
     "撒哈拉以南非洲 Sub-Saharan Africa",
     "北非 North Africa",
     "南非 Southern Africa",
@@ -38,9 +40,9 @@ KEYWORDS_GROUP_A = [
     "国家国际发展合作署 CIDCA",
 ]
 
-# 2. 关键词组B：基础设施相关（替换成你的完整列表）
+# 2. 关键词组B：基础设施相关
 KEYWORDS_GROUP_B = [
-  "智慧城市 Smart City",
+    "智慧城市 Smart City",
     "数字政府 e-Government",
     "光纤骨干网 Fiber Backbone",
     "物联网 IoT",
@@ -62,62 +64,189 @@ KEYWORDS_GROUP_B = [
 ]
 
 # 3. 接收结果的邮箱
-RECEIVE_EMAIL = "1418085836@qq.com"
+RECEIVE_EMAIL = "你的邮箱@xxx.com"
 
-# ====================== 搜索逻辑 ======================
+# ====================== 多平台搜索函数（核心修改）======================
+def search_baidu(keyword):
+    """百度搜索：按时间从新到旧，取前10条"""
+    try:
+        # 百度按时间排序的URL（tn=baidurt&ct=2097152&si=baidu.com&wd=关键词&bs=关键词&rsv_bp=0&rsv_spt=3&cl=2&f=8&rn=10&tn=baidurt&qbl=relate_question_0&wd=关键词&rqlang=cn&rs_src=0&rsv_pq=8a9c8c8c00008c8c&rsv_t=8c8c8c8c8c8c8c8c&rsv_btype=t&inputT=12345&rsv_sug3=12&rsv_sug1=12&rsv_sug7=100&rsv_sug2=0&rsv_sug4=12345）
+        encoded_keyword = urllib.parse.quote(keyword)
+        url = f"https://www.baidu.com/s?wd={encoded_keyword}&tn=baidurt&ct=2097152&rn=10&rqlang=cn&bs={encoded_keyword}&rsv_bp=1&rsv_spt=3&cl=2&f=8&rsv_sug2=0&inputT=0&rsv_sug4=0"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        results = []
+        # 提取百度按时间排序的结果
+        for item in soup.find_all('div', class_='result-op c-container xpath-log new-pmd')[:10]:
+            title_tag = item.find('h3', class_='t')
+            if not title_tag:
+                continue
+            title = title_tag.get_text().strip()
+            link_tag = title_tag.find('a')
+            if not link_tag:
+                continue
+            link = link_tag['href']
+            # 过滤广告（百度广告class含"ec-ad"）
+            if "ec-ad" in str(item):
+                continue
+            results.append((title, link))
+        return results
+    except Exception as e:
+        print(f"百度搜索出错：{keyword} - {str(e)}")
+        return []
+
+def search_bing(keyword):
+    """必应搜索：按时间从新到旧，取前10条"""
+    try:
+        encoded_keyword = urllib.parse.quote(keyword)
+        # 必应按时间排序URL（sort=date）
+        url = f"https://cn.bing.com/search?q={encoded_keyword}&sort=date&count=10"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        results = []
+        # 提取必应结果
+        for item in soup.find_all('li', class_='b_algo')[:10]:
+            title_tag = item.find('h2')
+            if not title_tag:
+                continue
+            title = title_tag.get_text().strip()
+            link_tag = title_tag.find('a')
+            if not link_tag:
+                continue
+            link = link_tag['href']
+            results.append((title, link))
+        return results
+    except Exception as e:
+        print(f"必应搜索出错：{keyword} - {str(e)}")
+        return []
+
+def search_google(keyword):
+    """谷歌搜索：按时间从新到旧，取前10条（注意：GitHub服务器可能无法访问谷歌，失败则跳过）"""
+    try:
+        encoded_keyword = urllib.parse.quote(keyword)
+        # 谷歌按时间排序URL（tbs=qdr:d&sort=date）
+        url = f"https://www.google.com/search?q={encoded_keyword}&tbs=qdr:d&sort=date&num=10"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        results = []
+        # 提取谷歌结果
+        for item in soup.find_all('div', class_='g')[:10]:
+            title_tag = item.find('h3')
+            if not title_tag:
+                continue
+            title = title_tag.get_text().strip()
+            link_tag = item.find('a')
+            if not link_tag:
+                continue
+            link = link_tag['href']
+            # 过滤谷歌广告
+            if "googleads" in link:
+                continue
+            results.append((title, link))
+        return results
+    except Exception as e:
+        print(f"谷歌搜索出错（大概率无法访问）：{keyword} - {str(e)}")
+        return []
+
+# ====================== 交叉搜索+去重 ======================
 def cross_search():
-    """关键词交叉搜索，返回汇总结果"""
-    results = []
-    results.append(f"【非洲基建搜索结果】{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    results.append("="*50 + "\n")
+    """关键词交叉搜索，多平台汇总+去重，返回汇总结果"""
+    # 存储所有结果（用集合去重，key为标题+链接的组合）
+    all_results = set()
+    total_keywords = len(KEYWORDS_GROUP_A) * len(KEYWORDS_GROUP_B)
+    current = 0
 
-    # 交叉组合关键词搜索（这里用百度搜索示例）
+    results_text = []
+    results_text.append(f"【非洲基建搜索结果】{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    results_text.append(f"总计交叉关键词数：{total_keywords}\n")
+    results_text.append("="*80 + "\n")
+
+    # 交叉组合关键词搜索
     for a in KEYWORDS_GROUP_A:
         for b in KEYWORDS_GROUP_B:
             keyword = f"{a} {b}"
-            results.append(f"\n🔍 搜索关键词：{keyword}")
+            current += 1
+            results_text.append(f"\n🔍 搜索关键词（{current}/{total_keywords}）：{keyword}")
+            results_text.append("\n--- 百度结果 ---")
             
-            # 百度搜索接口（无需APIKey，适合零基础）
-            try:
-                url = f"https://www.baidu.com/s?wd={requests.utils.quote(keyword)}"
-                # 添加请求头，模拟浏览器访问
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                }
-                response = requests.get(url, headers=headers, timeout=10)
-                response.raise_for_status()
-                
-                # 简单提取前3条结果标题（零基础友好版，不搞复杂解析）
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(response.text, 'html.parser')
-                search_results = soup.find_all('h3', class_='t')[:3]
-                
-                if search_results:
-                    for i, res in enumerate(search_results, 1):
-                        title = res.get_text().strip()
-                        link = res.find('a')['href']
-                        results.append(f"{i}. {title}")
-                        results.append(f"   链接：{link}")
-                else:
-                    results.append("   暂无有效结果")
-                    
-            except Exception as e:
-                results.append(f"   搜索出错：{str(e)}")
-            
-            time.sleep(1)  # 避免请求过快被封
+            # 1. 百度搜索
+            baidu_res = search_baidu(keyword)
+            if baidu_res:
+                for i, (title, link) in enumerate(baidu_res, 1):
+                    # 用标题+链接作为唯一标识去重
+                    unique_key = f"{title}_{link}"
+                    if unique_key not in all_results:
+                        all_results.add(unique_key)
+                        results_text.append(f"{i}. {title}")
+                        results_text.append(f"   链接：{link}")
+            else:
+                results_text.append("   暂无有效结果")
 
-    return "\n".join(results)
+            results_text.append("\n--- 必应结果 ---")
+            # 2. 必应搜索
+            bing_res = search_bing(keyword)
+            if bing_res:
+                for i, (title, link) in enumerate(bing_res, 1):
+                    unique_key = f"{title}_{link}"
+                    if unique_key not in all_results:
+                        all_results.add(unique_key)
+                        results_text.append(f"{i}. {title}")
+                        results_text.append(f"   链接：{link}")
+            else:
+                results_text.append("   暂无有效结果")
 
-# ====================== 发邮件逻辑 ======================
+            results_text.append("\n--- 谷歌结果 ---")
+            # 3. 谷歌搜索（大概率失败，仅尝试）
+            google_res = search_google(keyword)
+            if google_res:
+                for i, (title, link) in enumerate(google_res, 1):
+                    unique_key = f"{title}_{link}"
+                    if unique_key not in all_results:
+                        all_results.add(unique_key)
+                        results_text.append(f"{i}. {title}")
+                        results_text.append(f"   链接：{link}")
+            else:
+                results_text.append("   暂无有效结果（谷歌访问失败）")
+
+            # 延长等待时间，降低反爬概率
+            time.sleep(2)
+
+    # 汇总去重后的结果（可选：单独列出所有去重结果）
+    results_text.append("\n" + "="*80)
+    results_text.append(f"\n📊 去重后总结果数：{len(all_results)}")
+    results_text.append("\n--- 所有去重结果汇总 ---")
+    for i, unique_key in enumerate(all_results, 1):
+        title, link = unique_key.split("_", 1)  # 拆分唯一标识
+        results_text.append(f"{i}. {title}")
+        results_text.append(f"   链接：{link}")
+
+    return "\n".join(results_text)
+
+# ====================== 发邮件逻辑（无修改）=====================
 def send_email(content):
     """发送搜索结果到指定邮箱"""
-    # 配置你的发件邮箱SMTP（必改！看下面的说明）
-    SMTP_SERVER = "smtp.qq.com"  # 比如163邮箱是smtp.163.com，QQ是smtp.qq.com
+    # 配置你的发件邮箱SMTP（必改！）
+    SMTP_SERVER = "smtp.163.com"  # 比如163邮箱是smtp.163.com，QQ是smtp.qq.com
     SMTP_PORT = 465  # 加密端口，一般是465
-    SENDER_EMAIL = "1418085836@qq.com"  # 发件邮箱
-    SENDER_PASSWORD = "mlggihpdnertgaca"  # 不是登录密码，是SMTP授权码！
+    SENDER_EMAIL = "你的发件邮箱@163.com"  # 发件邮箱
+    SENDER_PASSWORD = "你的邮箱授权码"  # 不是登录密码，是SMTP授权码！
 
-    # 构建邮件内容
+    # 构建邮件内容（适配长内容）
     msg = MIMEText(content, 'plain', 'utf-8')
     msg['From'] = Header(f"非洲基建搜索工具 <{SENDER_EMAIL}>", 'utf-8')
     msg['To'] = Header(RECEIVE_EMAIL, 'utf-8')
