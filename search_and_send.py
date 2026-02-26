@@ -237,26 +237,34 @@ def cross_search():
 
     return "\n".join(results_text)
 
-# ====================== 发邮件逻辑（无修改）=====================
+# ====================== 发邮件逻辑（修复编码错误）=====================
 def send_email(content):
-    """发送搜索结果到指定邮箱"""
+    """发送搜索结果到指定邮箱（修复SMTP编码错误）"""
+    import sys
+    import locale
+    # 设置默认编码为UTF-8
+    sys.stdout.reconfigure(encoding='utf-8')
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    
     # 配置你的发件邮箱SMTP（必改！）
     SMTP_SERVER = "smtp.163.com"  # 比如163邮箱是smtp.163.com，QQ是smtp.qq.com
     SMTP_PORT = 465  # 加密端口，一般是465
-    SENDER_EMAIL = "你的发件邮箱@163.com"  # 发件邮箱
+    SENDER_EMAIL = "你的发件邮箱@163.com"  # 发件邮箱（确保是纯英文/数字，无中文）
     SENDER_PASSWORD = "你的邮箱授权码"  # 不是登录密码，是SMTP授权码！
 
-    # 构建邮件内容（适配长内容）
+    # 构建邮件内容（适配长内容+UTF-8编码）
     msg = MIMEText(content, 'plain', 'utf-8')
-    msg['From'] = Header(f"非洲基建搜索工具 <{SENDER_EMAIL}>", 'utf-8')
+    msg['From'] = Header(f"Africa Infra Search <{SENDER_EMAIL}>", 'utf-8')  # 去掉中文，用英文标识
     msg['To'] = Header(RECEIVE_EMAIL, 'utf-8')
-    msg['Subject'] = Header(f"【每日推送】非洲基建搜索结果 {datetime.now().strftime('%Y-%m-%d')}", 'utf-8')
+    msg['Subject'] = Header(f"Africa Infra Search Result {datetime.now().strftime('%Y-%m-%d')}", 'utf-8')  # 标题改用英文
 
-    # 发送邮件
+    # 发送邮件（强制UTF-8编码）
     try:
         server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.sendmail(SENDER_EMAIL, RECEIVE_EMAIL, msg.as_string())
+        server.ehlo()  # 初始化连接
+        # 强制用UTF-8编码登录
+        server.login(SENDER_EMAIL.encode('utf-8'), SENDER_PASSWORD.encode('utf-8'))
+        server.sendmail(SENDER_EMAIL, RECEIVE_EMAIL, msg.as_string().encode('utf-8'))
         server.quit()
         print("邮件发送成功！")
     except Exception as e:
