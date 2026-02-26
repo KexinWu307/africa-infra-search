@@ -8,7 +8,7 @@ from datetime import datetime
 # ====================== 自定义配置（你需要改的部分）======================
 # 1. 关键词组A：非洲各国/机构（替换成你的完整列表）
 KEYWORDS_GROUP_A = [
-“非洲 Africa
+"非洲 Africa
 撒哈拉以南非洲 Sub-Saharan Africa
 北非 North Africa
 南非 Southern Africa
@@ -35,7 +35,7 @@ KEYWORDS_GROUP_A = [
 中非合作论坛 FOCAC
 中国政府优惠贷款 Concessional Loan
 中国进出口银行 China Exim Bank
-国家国际发展合作署 CIDCA”
+国家国际发展合作署 CIDCA"
 ]
 
 # 2. 关键词组B：基础设施相关（替换成你的完整列表）
