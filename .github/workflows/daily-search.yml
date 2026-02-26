@@ -1,0 +1,36 @@
+# 任务名称
+name: 非洲基建每日搜索推送
+
+# 触发条件：每天早上8点（UTC时间0点，对应北京时间8点）
+on:
+  schedule:
+    - cron: '0 0 * * *'  # UTC时间0点 = 北京时间8点
+  # 手动触发（方便测试）
+  workflow_dispatch:
+
+# 任务执行逻辑
+jobs:
+  search-and-send:
+    # 运行环境：Ubuntu（GitHub提供的免费虚拟机）
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 步骤1：拉取仓库代码
+      - name: 拉取代码
+        uses: actions/checkout@v4
+      
+      # 步骤2：设置Python环境
+      - name: 设置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      # 步骤3：安装依赖包
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+      
+      # 步骤4：执行搜索+发邮件脚本
+      - name: 执行搜索并发送邮件
+        run: python search_and_send.py
