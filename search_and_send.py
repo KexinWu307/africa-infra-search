@@ -6,93 +6,90 @@ import time
 from datetime import datetime
 from bs4 import BeautifulSoup
 import urllib.parse
+import re
 
 # ====================== 自定义配置（你需要改的部分）======================
 # 1. 关键词组A：非洲各国/机构
 KEYWORDS_GROUP_A = [
-    "非洲 Africa",
-    "撒哈拉以南非洲 Sub-Saharan Africa",
-    "北非 North Africa",
-    "南非 Southern Africa",
-    "西非 West Africa",
-    "东非 East Africa",
-    "南部非洲发展共同体 SADC",
-    "西非国家经济共同体 ECOWAS",
-    "非洲大陆自由贸易区 AfCFTA",
-    "中亚 Central Asia",
-    "埃及 Egypt",
-    "利比亚 Libya",
-    "毛里塔尼亚 Mauritania",
-    "塞内加尔 Senegal",
-    "科特迪瓦 Cote d‘Ivoire",
-    "尼日利亚 Nigeria",
-    "喀麦隆 Cameroon",
-    "刚果民主共和国 DRC",
-    "安哥拉 Angola",
-    "肯尼亚 Kenya",
-    "乌干达 Uganda",
-    "哈萨克斯坦 Kazakhstan",
-    "乌兹别克斯坦 Uzbekistan",
-    "一带一路 Belt and Road",
-    "中非合作论坛 FOCAC",
-    "中国政府优惠贷款 Concessional Loan",
-    "中国进出口银行 China Exim Bank",
-    "国家国际发展合作署 CIDCA",
+    "非洲",
+    "中亚",
+    "埃及",
+    "毛里塔尼亚",
+    "塞内加尔",
+    "科特迪瓦",
+    "尼日利亚",
+    "喀麦隆",
+    "刚果民主共和国",
+    "安哥拉",
+    "肯尼亚",
+    "乌干达",
+    "乌兹别克斯坦",
+    "一带一路",
+    "中非合作论坛",
+    "中国政府优惠贷款",
+    "中国进出口银行",
+    "国家国际发展合作署",
 ]
 
 # 2. 关键词组B：基础设施相关
 KEYWORDS_GROUP_B = [
-    "智慧城市 Smart City",
-    "数字政府 e-Government",
-    "光纤骨干网 Fiber Backbone",
-    "物联网 IoT",
-    "光伏 Solar PV",
-    "太阳能 Solar Power",
-    "电站 Power Plant",
-    "电网 Power Grid",
-    "输变电 Transmission Line",
-    "变电站 Substation",
-    "矿业 Mining",
-    "矿山供电 Mine Power Supply",
-    "源网荷储 Source-Grid-Load-Storage",
-    "铁路 Railway",
-    "港口 Port",
-    "公路 Highway",
-    "机场 Airport",
-    "基础设施 Infrastructure",
-    "公共工程 Public Works",
+    "智慧城市",
+    "数字政府",
+    "光纤骨干网",
+    "物联网",
+    "光伏",
+    "太阳能",
+    "矿业",
+    "矿山供电",
+    "铁路",
+    "港口",
+    "公路",
+    "机场",
+    "基础设施",
 ]
 
-# 3. 接收结果的邮箱
-RECEIVE_EMAIL = "你的邮箱@xxx.com"
+# 3. 邮箱配置（必改！）
+RECEIVE_EMAIL = "1418085836@qq.com"  # 接收结果的邮箱
+SENDER_EMAIL = "1418085836@qq.com"   # 发件邮箱（163/QQ/企业邮箱均可）
+SENDER_PASSWORD = "fptablpbheevfgii"  # 不是登录密码，是SMTP授权码
+SMTP_SERVER = "smtp.qq.com"            # 163: smtp.163.com | QQ: smtp.qq.com
+SMTP_PORT = 465                         # 加密端口，一般为465
 
-# ====================== 多平台搜索函数（核心修改）======================
+# ====================== 通用请求头（防反爬）======================
+COMMON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Referer": "https://www.baidu.com/",
+    "Cache-Control": "max-age=0"
+}
+
+# ====================== 多平台搜索函数（修复核心问题）======================
 def search_baidu(keyword):
-    """百度搜索：按时间从新到旧，取前10条"""
+    """百度搜索：修复结果解析，按时间从新到旧，取前10条"""
     try:
-        # 百度按时间排序的URL（tn=baidurt&ct=2097152&si=baidu.com&wd=关键词&bs=关键词&rsv_bp=0&rsv_spt=3&cl=2&f=8&rn=10&tn=baidurt&qbl=relate_question_0&wd=关键词&rqlang=cn&rs_src=0&rsv_pq=8a9c8c8c00008c8c&rsv_t=8c8c8c8c8c8c8c8c&rsv_btype=t&inputT=12345&rsv_sug3=12&rsv_sug1=12&rsv_sug7=100&rsv_sug2=0&rsv_sug4=12345）
         encoded_keyword = urllib.parse.quote(keyword)
-        url = f"https://www.baidu.com/s?wd={encoded_keyword}&tn=baidurt&ct=2097152&rn=10&rqlang=cn&bs={encoded_keyword}&rsv_bp=1&rsv_spt=3&cl=2&f=8&rsv_sug2=0&inputT=0&rsv_sug4=0"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=15)
+        # 百度按时间排序的正确URL（增加tn=baidulocal）
+        url = f"https://www.baidu.com/s?wd={encoded_keyword}&tn=baidulocal&cl=2&ct=2097152&rn=10&rsv_bp=1&rsv_spt=3&ie=utf-8&rsv_t=123"
+        response = requests.get(url, headers=COMMON_HEADERS, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
         results = []
-        # 提取百度按时间排序的结果
+        # 修复：百度新版搜索结果class
         for item in soup.find_all('div', class_='result-op c-container xpath-log new-pmd')[:10]:
-            title_tag = item.find('h3', class_='t')
+            # 兼容百度不同样式的标题提取
+            title_tag = item.find('h3', class_='t') or item.find('h3')
             if not title_tag:
                 continue
             title = title_tag.get_text().strip()
             link_tag = title_tag.find('a')
-            if not link_tag:
+            if not link_tag or 'href' not in link_tag.attrs:
                 continue
             link = link_tag['href']
-            # 过滤广告（百度广告class含"ec-ad"）
-            if "ec-ad" in str(item):
+            
+            # 过滤广告
+            if "ec-ad" in str(item) or "推广" in title:
                 continue
             results.append((title, link))
         return results
@@ -104,24 +101,19 @@ def search_bing(keyword):
     """必应搜索：按时间从新到旧，取前10条"""
     try:
         encoded_keyword = urllib.parse.quote(keyword)
-        # 必应按时间排序URL（sort=date）
-        url = f"https://cn.bing.com/search?q={encoded_keyword}&sort=date&count=10"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=15)
+        url = f"https://cn.bing.com/search?q={encoded_keyword}&sort=date&count=10&mkt=zh-CN"
+        response = requests.get(url, headers=COMMON_HEADERS, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
         results = []
-        # 提取必应结果
         for item in soup.find_all('li', class_='b_algo')[:10]:
             title_tag = item.find('h2')
             if not title_tag:
                 continue
             title = title_tag.get_text().strip()
             link_tag = title_tag.find('a')
-            if not link_tag:
+            if not link_tag or 'href' not in link_tag.attrs:
                 continue
             link = link_tag['href']
             results.append((title, link))
@@ -131,30 +123,32 @@ def search_bing(keyword):
         return []
 
 def search_google(keyword):
-    """谷歌搜索：按时间从新到旧，取前10条（注意：GitHub服务器可能无法访问谷歌，失败则跳过）"""
+    """谷歌搜索：修复链接提取，按时间从新到旧，取前10条"""
     try:
         encoded_keyword = urllib.parse.quote(keyword)
-        # 谷歌按时间排序URL（tbs=qdr:d&sort=date）
-        url = f"https://www.google.com/search?q={encoded_keyword}&tbs=qdr:d&sort=date&num=10"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=15)
+        url = f"https://www.google.com/search?q={encoded_keyword}&tbs=qdr:d&sort=date&num=10&hl=zh-CN"
+        response = requests.get(url, headers=COMMON_HEADERS, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
         results = []
-        # 提取谷歌结果
         for item in soup.find_all('div', class_='g')[:10]:
             title_tag = item.find('h3')
             if not title_tag:
                 continue
             title = title_tag.get_text().strip()
             link_tag = item.find('a')
-            if not link_tag:
+            if not link_tag or 'href' not in link_tag.attrs:
                 continue
-            link = link_tag['href']
-            # 过滤谷歌广告
+            
+            # 修复：解析谷歌跳转链接，提取真实URL
+            raw_link = link_tag['href']
+            if raw_link.startswith('/url?q='):
+                link = urllib.parse.unquote(raw_link.split('/url?q=')[1].split('&')[0])
+            else:
+                link = raw_link
+            
+            # 过滤广告
             if "googleads" in link:
                 continue
             results.append((title, link))
@@ -163,11 +157,11 @@ def search_google(keyword):
         print(f"谷歌搜索出错（大概率无法访问）：{keyword} - {str(e)}")
         return []
 
-# ====================== 交叉搜索+去重 ======================
+# ====================== 交叉搜索+去重（修复去重逻辑）=====================
 def cross_search():
     """关键词交叉搜索，多平台汇总+去重，返回汇总结果"""
-    # 存储所有结果（用集合去重，key为标题+链接的组合）
-    all_results = set()
+    # 修复：用字典存储结果（key=链接，value=标题），避免标题含_导致拆分错误
+    all_results = {}
     total_keywords = len(KEYWORDS_GROUP_A) * len(KEYWORDS_GROUP_B)
     current = 0
 
@@ -188,10 +182,8 @@ def cross_search():
             baidu_res = search_baidu(keyword)
             if baidu_res:
                 for i, (title, link) in enumerate(baidu_res, 1):
-                    # 用标题+链接作为唯一标识去重
-                    unique_key = f"{title}_{link}"
-                    if unique_key not in all_results:
-                        all_results.add(unique_key)
+                    if link not in all_results:
+                        all_results[link] = title
                         results_text.append(f"{i}. {title}")
                         results_text.append(f"   链接：{link}")
             else:
@@ -202,9 +194,8 @@ def cross_search():
             bing_res = search_bing(keyword)
             if bing_res:
                 for i, (title, link) in enumerate(bing_res, 1):
-                    unique_key = f"{title}_{link}"
-                    if unique_key not in all_results:
-                        all_results.add(unique_key)
+                    if link not in all_results:
+                        all_results[link] = title
                         results_text.append(f"{i}. {title}")
                         results_text.append(f"   链接：{link}")
             else:
@@ -215,65 +206,65 @@ def cross_search():
             google_res = search_google(keyword)
             if google_res:
                 for i, (title, link) in enumerate(google_res, 1):
-                    unique_key = f"{title}_{link}"
-                    if unique_key not in all_results:
-                        all_results.add(unique_key)
+                    if link not in all_results:
+                        all_results[link] = title
                         results_text.append(f"{i}. {title}")
                         results_text.append(f"   链接：{link}")
             else:
                 results_text.append("   暂无有效结果（谷歌访问失败）")
 
-            # 延长等待时间，降低反爬概率
-            time.sleep(2)
+            # 优化：随机休眠1-3秒，降低反爬概率
+            time.sleep(1 + (current % 3))
 
-    # 汇总去重后的结果（可选：单独列出所有去重结果）
+    # 汇总去重后的结果
     results_text.append("\n" + "="*80)
     results_text.append(f"\n📊 去重后总结果数：{len(all_results)}")
     results_text.append("\n--- 所有去重结果汇总 ---")
-    for i, unique_key in enumerate(all_results, 1):
-        title, link = unique_key.split("_", 1)  # 拆分唯一标识
+    for i, (link, title) in enumerate(all_results.items(), 1):
         results_text.append(f"{i}. {title}")
         results_text.append(f"   链接：{link}")
 
-    return "\n".join(results_text)
+    # 限制内容长度（避免邮箱拦截）
+    final_content = "\n".join(results_text)
+    if len(final_content) > 50000:
+        final_content = final_content[:50000] + "\n\n⚠️ 内容过长，已截断前50000字符"
+    
+    return final_content
 
 # ====================== 发邮件逻辑（修复编码错误）=====================
 def send_email(content):
-    """发送搜索结果到指定邮箱（修复SMTP编码错误）"""
-    import sys
-    import locale
-    # 设置默认编码为UTF-8
-    sys.stdout.reconfigure(encoding='utf-8')
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-    
-    # 配置你的发件邮箱SMTP（必改！）
-    SMTP_SERVER = "smtp.163.com"  # 比如163邮箱是smtp.163.com，QQ是smtp.qq.com
-    SMTP_PORT = 465  # 加密端口，一般是465
-    SENDER_EMAIL = "你的发件邮箱@163.com"  # 发件邮箱（确保是纯英文/数字，无中文）
-    SENDER_PASSWORD = "你的邮箱授权码"  # 不是登录密码，是SMTP授权码！
-
-    # 构建邮件内容（适配长内容+UTF-8编码）
-    msg = MIMEText(content, 'plain', 'utf-8')
-    msg['From'] = Header(f"Africa Infra Search <{SENDER_EMAIL}>", 'utf-8')  # 去掉中文，用英文标识
-    msg['To'] = Header(RECEIVE_EMAIL, 'utf-8')
-    msg['Subject'] = Header(f"Africa Infra Search Result {datetime.now().strftime('%Y-%m-%d')}", 'utf-8')  # 标题改用英文
-
-    # 发送邮件（强制UTF-8编码）
+    """发送搜索结果到指定邮箱（修复编码+优化兼容性）"""
     try:
-        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        server.ehlo()  # 初始化连接
-        # 强制用UTF-8编码登录
-        server.login(SENDER_EMAIL.encode('utf-8'), SENDER_PASSWORD.encode('utf-8'))
-        server.sendmail(SENDER_EMAIL, RECEIVE_EMAIL, msg.as_string().encode('utf-8'))
-        server.quit()
-        print("邮件发送成功！")
-    except Exception as e:
-        print(f"邮件发送失败：{str(e)}")
-        raise e
+        # 构建邮件内容（纯文本+UTF-8强制编码）
+        msg = MIMEText(content, 'plain', 'utf-8')
+        msg['From'] = Header(f"Africa Infra Search <{SENDER_EMAIL}>", 'utf-8')
+        msg['To'] = Header(RECEIVE_EMAIL, 'utf-8')
+        msg['Subject'] = Header(f"Africa Infra Search Result {datetime.now().strftime('%Y-%m-%d')}", 'utf-8')
 
-# ====================== 主程序 ======================
+        # 发送邮件（移除冗余编码，简化逻辑）
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVE_EMAIL, msg.as_string())
+        print("✅ 邮件发送成功！")
+    except Exception as e:
+        print(f"❌ 邮件发送失败：{str(e)}")
+        # 打印详细错误信息，方便排查
+        import traceback
+        traceback.print_exc()
+
+# ====================== 主程序（增加全局异常捕获）=====================
 if __name__ == "__main__":
-    # 1. 执行交叉搜索
-    search_result = cross_search()
-    # 2. 发送邮件
-    send_email(search_result)
+    try:
+        print(f"🚀 开始执行非洲&中亚基建交叉搜索：{datetime.now()}")
+        # 1. 执行交叉搜索
+        search_result = cross_search()
+        # 2. 打印结果（方便调试）
+        print(search_result)
+        # 3. 发送邮件
+        send_email(search_result)
+        print(f"🎉 任务完成：{datetime.now()}")
+    except Exception as e:
+        print(f"❌ 程序执行失败：{str(e)}")
+        # 发送失败提醒邮件
+        error_content = f"程序执行失败：{str(e)}\n{datetime.now()}"
+        send_email(error_content)
